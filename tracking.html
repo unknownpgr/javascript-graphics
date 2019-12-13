@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Tracking </title>
+	<link rel="stylesheet" href="./fullCanvas.css">
+</head>
+
+<body>
+	<canvas id="canvas" onmousemove="move(event)"></canvas>
+	<div id="logDiv"></div>
+	<script>
+		var cnv = canvas
+		var ctx = cnv.getContext("2d")
+		var body = document.getElementsByTagName('body')[0]
+		var width = body.clientWidth
+		var height = body.clientHeight
+		cnv.width = width
+		cnv.height = height
+
+		var pos = []
+
+		var cur = { x: 0, y: 0 }
+
+		function move(event) {
+			cur = {
+				x: event.clientX,
+				y: event.clientY
+			}
+		}
+
+		setInterval(() => {
+			pos.push(cur)
+			if (pos.length > 100) pos = pos.splice(1)
+		}, 10);
+
+		setInterval(() => {
+			if (pos.length < 1) return;
+			ctx.clearRect(0, 0, cnv.width, cnv.height)
+			for (var i = 0; i < pos.length - 1; i++) {
+				ctx.strokeStyle = 'rgba(0,0,0,' + (i + 1) / pos.length + ')'
+				ctx.lineWidth = ((i + 1) / pos.length) * 5
+				ctx.beginPath()
+				ctx.moveTo(pos[i].x, pos[i].y)
+				ctx.lineTo(pos[i + 1].x, pos[i + 1].y)
+				ctx.stroke()
+			}
+		}, 5);
+	</script>
+</body>
+
+</html>

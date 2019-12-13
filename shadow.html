@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Shadow</title>
+	<link rel="stylesheet" href="./fullCanvas.css">
+	<style>
+		#inputFrame{
+			position: absolute;
+			right: 32px;
+			bottom: 32px;
+			background-color: #8888b8;
+			padding: 8px;
+			border-radius: 4px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="inputFrame">
+		<span>Show ray line</span>
+		<input type="checkbox" onclick="showLine(event)">
+		<span>Show raycast point</span>
+		<input type="checkbox" onclick="showPoint(event)">
+		<span>Show point order</span>
+		<input type="checkbox" onclick="showOrder(event)">
+	</div>
+	<canvas id="canvas" onmousemove="move(event)" onclick="onClick(event)"></canvas>
+	<div id="logDiv"></div>
+	<script>
+		var cnv = canvas
+		var ctx = cnv.getContext("2d")
+		var body = document.getElementsByTagName('body')[0]
+		var width = body.clientWidth
+		var height = body.clientHeight
+		cnv.width = width
+		cnv.height = height
+
+		//Basic vector operations
+
+		const add = (a, b) => a.map((v, i) => v + b[i])
+		const sub = (a, b) => a.map((v, i) => v - b[i])
+		const point = (a, b) => a.reduce((p, c, i) => p + c * b[i], 0)
+		const mul = (x, c) => x.map(v => v * c)
+		const div = (x, c) => x.map(v => v / c)
+		const mag2 = (x) => point(x, x)
+		const mag = (x) => Math.sqrt(mag2(x))
+		const nor = (x) => div(x, mag(x))	 	// get the unit vector of given direction.
+		const oth = (x) => [-x[1], x[0]]		// get the orthogonal vector. (clockwise)
+		const eql = (a, b) => a.reduce((p, c, i) => p && (c == b[i]), true)
+
+		// [ Vector Expressions ]
+		// Vector = [x,y]
+		// Line = [[Start vector],[Direction vector]]
+		// Segment = [[Start vector],[Segment vector]]
+
+		// Convert the line from vector form to aX+bY+c = 0 from
+		function lineToEq(line) {
+			return [line[1][1], -line[1][0], line[0][0] * line[1][1] - line[0][1] * line[1][0]]
+		}
+
+		// Get the intersection of the given two lines.
+		function lineCollision(lineA, lineB) {
+			eqA = lineToEq(lineA)
+			eqB = lineToEq(lineB)
+			var det = eqA[0] * eqB[1] - eqA[1] * eqB[0]
+			if (det == 0) return
+			var x = (eqA[1] * eqB[2] - eqA[2] * eqB[1]) / det
+			var y = (eqA[0] * x + eqA[2]) / eqA[1]
+			return [-x, y]
+		}
+
+		// Get the interaction of the given line and segment.(vector form)
+		function lineSegCollision(line, seg) {
+			var p = lineCollision(line, seg)
+			if (!p) return
+
+			var xMin = Math.min(seg[0][0], seg[0][0] + seg[1][0])
+			var xMax = Math.max(seg[0][0], seg[0][0] + seg[1][0])
+
+			var yMin = Math.min(seg[0][1], seg[0][1] + seg[1][1])
+			var yMax = Math.max(seg[0][1], seg[0][1] + seg[1][1])
+
+			if (p[0] < xMin - 0.0001 ||
+				p[0] > xMax + 0.0001 ||
+				p[1] < yMin - 0.0001 ||
+				p[1] > yMax + 0.0001) return
+			return p
+		}
+
+		// Get the raycast points of the given ray([[Start point],[Direction]])
+		function rayCast(ray) {
+			var output = []
+			objectList.forEach(o => o.forEach(s => output.push(lineSegCollision(ray, s))))
+			return output
+				.filter(x => x) //Remove the undefind values
+				.filter(x => point(sub(x, ray[0]), ray[1]) > 0) //Remove the points on the opposide of the ray direction
+		}
+
+		// Same with rayCast(ray) but returns the points relative to the start point
+		function relativeRayCast(ray) {
+			return rayCast(ray).map(p => sub(p, ray[0]))
+		}
+
+		// Get shortest vector
+		function getShortestVecotr(points) {
+			return points.sort((a, b) => {
+				var da = mag2(a)
+				var db = mag2(b)
+				if (da == db) return 0
+				if (da > db) return 1
+				return -1
+			})[0]
+		}
+
+
+		// Get the square whose center is (x,y) and each sides are 2r
+		function getBoxR(x, y, r) {
+			return [
+				[[x - r, y - r], [r + r, 0]],
+				[[x + r, y - r], [0, r + r]],
+				[[x + r, y + r], [-r - r, 0]],
+				[[x - r, y + r], [0, -r - r]]
+			]
+		}
+
+		// Get unduplicated points from object list
+		function getPoints(objList) {
+
+			//Check if the point is in given array
+			function pointInArray(array, point) {
+				return array.reduce((p, c) => p || (eql(c, point)), false)
+			}
+
+			var ps = []
+			objList.forEach(obj => obj.forEach(seg => {
+				if (!pointInArray(ps, seg[0])) ps.push(seg[0])
+				var end = add(seg[0], seg[1])
+				if (!pointInArray(ps, end)) ps.push(end)
+			}))
+			return ps
+		}
+
+		// Get rectangle from x,y to x+w,y+h
+		function getBox(x, y, w, h) {
+			return [
+				[[x, y], [w, 0]],
+				[[x + w, y], [0, h]],
+				[[x + w, y + h], [-w, 0]],
+				[[x, y + h], [0, -h]]
+			]
+		}
+
+		// Object list. object is made up of sides of figure
+		var objectList = [
+			getBox(10, 10, width - 20, height - 20),
+			getBoxR(164, 164, 32),
+			getBoxR(164, 228 + 32, 32),
+			getBoxR(164, 292 + 64, 32),
+			getBoxR(228 + 32, 292 + 64, 32),
+			getBoxR(600, 200, 100)
+		]
+
+		var points = getPoints(objectList)
+
+
+		// Draw segment from start to end
+		function baseDraw(start, end) {
+			ctx.beginPath()
+			ctx.moveTo(start[0], start[1])
+			ctx.lineTo(end[0], end[1])
+			ctx.stroke()
+		}
+
+		const drawVector = (vec) => baseDraw([0, 0], mul(vec, 9999))
+		const drawLine = (line) => baseDraw(line[0], add(line[0], mul(line[1], 9999)))
+		const drawSegment = (seg) => baseDraw(seg[0], add(seg[0], seg[1]))
+
+		// Draw obejcts
+		function drawObjects(objectList) {
+			objectList.forEach(o => o.forEach(s => drawSegment(s)))
+		}
+
+		var lineShow = false;
+		var pointShow = false;
+		var orderShow = false;
+
+		function showLine(event) {
+			lineShow = event.target.checked
+			refresh()
+		}
+
+		function showPoint(event) {
+			pointShow = event.target.checked
+			refresh()
+		}
+
+		function showOrder(event) {
+			orderShow = event.target.checked
+			refresh()
+		}
+
+		var mouse = [100, 100]
+
+		function move(event) {
+			// Mouse position vector
+			if (event) mouse = [event.clientX, event.clientY]
+			refresh()
+		}
+
+		function refresh() {
+
+			// Get rays to slightly left and right of points
+			var rays = []
+			points.forEach(point => {
+				var dir = sub(point, mouse)
+				var othDir = mul(nor(oth(dir)), 0.01)
+				rays.push([mouse, add(dir, othDir)])
+				rays.push([mouse, sub(dir, othDir)])
+			})
+
+			// Get the raycast points
+			var allPoints = rays.map(ray => relativeRayCast(ray))
+
+			var ps = allPoints
+				.reduce((p, c) => p.concat([getShortestVecotr(c)]), [])
+				.filter(x => x)
+				.sort((a, b) => {
+					var aA = Math.atan2(a[1], a[0])
+					var bA = Math.atan2(b[1], b[0])
+					if (aA == bA) return 0
+					if (aA > bA) return 1
+					return -1
+				}) // Sort points clockwise
+				.map(p => add(p, mouse)) // Convert points to absolute position
+
+			allPoints = allPoints.map(ps => ps.map(p => add(p, mouse)))
+
+
+			ctx.fillStyle = '#000'
+			ctx.fillRect(0, 0, width, height)
+
+			ctx.strokeStyle = '#888'
+			drawObjects(objectList)
+
+			// Draw light
+			ctx.fillStyle = '#a8a888'
+			ctx.beginPath()
+			ctx.moveTo(ps[0][0], ps[0][1])
+			for (var i = 0; i < ps.length - 1; i++) {
+				ctx.lineTo(ps[i + 1][0], ps[i + 1][1])
+			}
+			ctx.fill()
+
+			// Draw the raycast points
+			if (pointShow) {
+				ctx.strokeStyle = '#f00'
+				ctx.beginPath()
+				allPoints.forEach(ps => ps.forEach((p, i) => {
+					ctx.moveTo(p[0] + 2, p[1])
+					ctx.arc(p[0], p[1], 2, 0, Math.PI * 2)
+				}))
+				ctx.stroke()
+			}
+
+			// Draw the point orders
+			if (orderShow) {
+				ctx.fillStyle = '#444'
+				ctx.beginPath()
+				ps.forEach((p, i) => {
+					ctx.moveTo(p[0], p[1])
+					ctx.fillText(i, p[0], p[1]);
+				})
+				ctx.stroke()
+			}
+
+			//Draw the rays
+			if (lineShow) {
+				ctx.strokeStyle = '#f00'
+				rays.forEach(ray => {
+					drawLine(ray)
+				})
+			}
+		}
+
+		function onClick(event) {
+			objectList.push(getBoxR(event.clientX, event.clientY, (Math.random() * 48) + 16))
+			points = getPoints(objectList)
+			refresh()
+		}
+
+		refresh()
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Planet</title>
+	<link rel="stylesheet" href="./fullCanvas.css">
+</head>
+
+<body>
+	<canvas id="canvas" onclick="onClick(event)"></canvas>
+	<div id="logDiv"></div>
+	<script>
+		var cnv = canvas
+		var ctx = cnv.getContext("2d")
+		var body = document.getElementsByTagName('body')[0]
+		var width = body.clientWidth
+		var height = body.clientHeight
+		cnv.width = width
+		cnv.height = height
+
+		const add = (a, b) => a.map((v, i) => v + b[i])
+		const sub = (a, b) => a.map((v, i) => v - b[i])
+		const dot = (a, b) => a.reduce((p, c, i) => p + c * b[i], 0)
+		const mul = (x, c) => x.map(v => v * c)
+		const div = (x, c) => x.map(v => v / c)
+		const mag2 = (x) => dot(x, x)
+		const mag = (x) => Math.sqrt(mag2(x))
+		const nor = (x) => div(x, mag(x))
+
+		let oX = [110, 200]
+		let mX = [300, 300]
+
+		let oV = [1, -1]
+
+		let path = []
+
+		let farPs = []
+		let cloPs = []
+		let bef2 = [0, 0]
+		let bef1 = [0, 0]
+
+		const onClick = (event) => {
+			mX = [event.clientX, event.clientY]
+			farPs = []
+			cloPs = []
+		}
+
+		setInterval(() => {
+			let d = sub(mX, oX)
+			let oA = div(d, mag(d) * mag2(d) / 1000)
+
+			oV = add(oV, oA)
+			oX = add(oV, oX)
+
+			//Calculate aphelion and perihelion
+			dBef2 = mag2(sub(bef2, mX))
+			dBef1 = mag2(sub(bef1, mX))
+			dCur = mag2(sub(oX, mX))
+
+			bef2 = bef1
+			bef1 = oX
+
+			if (dBef1 > dBef2 && dBef1 > dCur) farPs.push(bef1)
+			if (dBef1 < dBef2 && dBef1 < dCur) cloPs.push(bef1)
+
+			//Save path
+			path.push(oX)
+			if (path.length >= 100) path = path.splice(1)
+
+			//Start draw
+			ctx.clearRect(0, 0, width, height)
+
+			//Draw object
+			ctx.strokeStyle = '#000'
+			ctx.beginPath()
+			ctx.arc(oX[0], oX[1], 5, 0, Math.PI * 2)
+			ctx.stroke();
+
+			//Draw mouse
+			ctx.strokeStyle = '#f00'
+			ctx.beginPath()
+			ctx.arc(mX[0], mX[1], 5, 0, Math.PI * 2)
+			ctx.stroke();
+
+			//Draw line
+			ctx.strokeStyle = '#888'
+			ctx.beginPath()
+			ctx.moveTo(path[0][0], path[0][1])
+			path.forEach(p => ctx.lineTo(p[0], p[1]))
+			ctx.stroke()
+
+			//Draw far points
+			ctx.strokeStyle = '#00f'
+			ctx.beginPath()
+			farPs.forEach(p => {
+				ctx.moveTo(p[0], p[1])
+				ctx.arc(p[0], p[1], 2, 0, Math.PI * 2)
+			})
+			ctx.stroke()
+
+			//Draw close points
+			ctx.strokeStyle = '#0f0'
+			ctx.beginPath()
+			cloPs.forEach(p => {
+				ctx.moveTo(p[0], p[1])
+				ctx.arc(p[0], p[1], 2, 0, Math.PI * 2)
+			})
+			ctx.stroke()
+
+
+		}, 10);
+	</script>
+</body>
+
+</html>

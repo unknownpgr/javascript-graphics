@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Field</title>
+	<link rel="stylesheet" href="./fullCanvas.css">
+	<style>
+		#inputBox{
+			position: absolute;
+			background-color: rgba(255,255,255, 0.8);
+			padding: 8px;
+			left: 16px;
+			top: 16px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="inputBox">
+		<input type="checkbox" onclick="gridCheck(event)" checked>Grid</input>
+		<input type="checkbox" onclick="lineCheck(event)">Tracking line</input>
+		<input type="checkbox" onclick="pointCheck(event)">Point</input>
+	</div>
+
+	<canvas id="canvas" onmousemove="move(event)"></canvas>
+	<div id="logDiv"></div>
+	<script>
+		var cnv = canvas
+		var ctx = cnv.getContext("2d")
+		var body = document.getElementsByTagName('body')[0]
+		var width = body.clientWidth
+		var height = body.clientHeight
+		cnv.width = width
+		cnv.height = height
+
+		const add = (a, b) => a.map((v, i) => v + b[i])
+		const sub = (a, b) => a.map((v, i) => v - b[i])
+		const dot = (a, b) => a.reduce((p, c, i) => p + c * b[i], 0)
+		const mul = (x, c) => x.map(v => v * c)
+		const div = (x, c) => x.map(v => v / c)
+		const mag2 = (x) => dot(x, x)
+		const mag = (x) => Math.sqrt(mag2(x))
+		const nor = (x) => div(x, mag(x))
+		const interpolation = (cur, dest, div = 0.5) => add(mul(dest, div), mul(cur, 1 - div))
+
+		var list = []
+		var mouse = [-999999, -999999]
+
+		let showGrid = true
+		let showLine = false
+		let showPoint = false
+
+		const gridCheck = event => showGrid = event.target.checked
+		const lineCheck = event => showLine = event.target.checked
+		const pointCheck = event => showPoint = event.target.checked
+
+		const move = (event) => mouse = [event.clientX, event.clientY]
+
+		let grid = 24
+
+		for (var i = grid / 2; i < width; i += grid) {
+			var row = []
+			for (var j = grid / 2; j < height; j += grid) row.push({ ax: [i, j], x: [i, j] })
+			list.push(row)
+		}
+
+		setInterval(() => {
+			ctx.clearRect(0, 0, width, height)
+			ctx.beginPath()
+			list.forEach((row, y) => row.forEach((item, x) => {
+
+				if (!(showGrid || showLine || showPoint)) return
+
+				var move = sub(item.ax, mouse)
+				if (move[0] == 0 && move[1] == 0) move = [1, 1]
+				move = mul(nor(move), 50 * Math.pow(0.99998, mag2(move)))
+
+				var dest = add(item.ax, move)
+				var next = interpolation(item.x, dest, 0.1)
+
+				if (showGrid) {
+					ctx.moveTo(item.x[0], item.x[1])
+					var down = list[y + 1] ? list[y + 1][x] : undefined
+					var right = list[y][x + 1]
+					if (down) ctx.lineTo(down.x[0], down.x[1])
+					ctx.moveTo(item.x[0], item.x[1])
+					if (right) ctx.lineTo(right.x[0], right.x[1])
+				}
+
+				if (showLine) {
+					ctx.moveTo(item.ax[0], item.ax[1])
+					ctx.lineTo(item.x[0], item.x[1])
+				}
+
+				if (showPoint) {
+					ctx.moveTo(item.x[0] + 5, item.x[1])
+					ctx.arc(item.x[0], item.x[1], 5, 0, Math.PI * 2)
+				}
+
+				item.x = next
+			}))
+			ctx.stroke()
+		}, 30);
+	</script>
+</body>
+
+</html>

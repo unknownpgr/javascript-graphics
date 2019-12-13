@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Field</title>
+	<link rel="stylesheet" href="./fullCanvas.css">
+</head>
+
+<body>
+	<canvas id="canvas"></canvas>
+	<div id="logDiv"></div>
+	<script>
+		var cnv = canvas
+		var ctx = cnv.getContext("2d")
+		var body = document.getElementsByTagName('body')[0]
+		var width = body.clientWidth
+		var height = body.clientHeight
+		cnv.width = width
+		cnv.height = height
+
+		const add = (a, b) => a.map((v, i) => v + b[i])
+		const sub = (a, b) => a.map((v, i) => v - b[i])
+		const dot = (a, b) => a.reduce((p, c, i) => p + c * b[i], 0)
+		const mul = (x, c) => x.map(v => v * c)
+		const div = (x, c) => x.map(v => v / c)
+		const mag2 = (x) => dot(x, x)
+		const mag = (x) => Math.sqrt(mag2(x))
+		const nor = (x) => div(x, mag(x))
+		const interpolation = (cur, dest, div = 0.5) => add(mul(dest, div), mul(cur, 1 - div))
+
+		function applyStep(current, func) {
+			return add(current, func(current))
+		}
+
+		function convertTomap(pos, window = [width, height], margin = 0) {
+			var newPos = pos.map(x => x)
+			newPos[1] = -newPos[1]
+			newPos = add(newPos, div(window, 2))
+			return newPos
+		}
+
+		function drawLine(pos, dir) {
+			var stt = convertTomap(pos)
+			var end = convertTomap(add(pos, dir))
+			ctx.beginPath()
+			ctx.moveTo(stt[0], stt[1])
+			ctx.lineTo(end[0], end[1])
+			ctx.stroke()
+		}
+
+		function drawArrow(pos, dir, headSize = 2) {
+			var end = add(pos, dir)
+			var head = mul(nor(dir), -1 * headSize)
+			var headArmA = [head[0] - head[1], head[1] + head[0]]
+			var headArmB = [head[0] + head[1], head[1] - head[0]]
+			drawLine(pos, dir)
+			drawLine(end, headArmA)
+			drawLine(end, headArmB)
+		}
+
+		function drawFunction(func, scaleF = 400, scaledF = 1, count = 10) {
+			for (var i = -count; i < count; i += 1)
+				for (var j = -count; j < count; j += 1) {
+					drawArrow(mul([i, j], scaleF / count), mul(func([i, j]), scaledF * scaleF / count))
+				}
+			drawArrow([-scaleF * 1.1, 0], [scaleF * 2.2, 0])
+			drawArrow([0, -scaleF * 1.1], [0, scaleF * 2.2])
+		}
+
+		function drawDot(pos, func, count, scaleF, timeSplit) {
+			var t = 0;
+			var intervalId = setInterval(() => {
+				ctx.clearRect(0, 0, 9999, 9999);
+				ctx.beginPath()
+				for (var i = 0; i < 10000; i++) {
+					pos[2] = t;
+					pos = add(pos, mul(func(pos), timeSplit))
+					var temp = convertTomap(mul(pos, scaleF / count))
+					ctx.lineTo(temp[0], temp[1])
+					// ctx.arc(temp[0], temp[1], .5, 0, Math.PI * 2, false)
+
+					if (Math.abs(pos[0]) > 10000 || Math.abs(pos[1]) > 10000) {
+						alert('divergence!')
+						clearInterval(intervalId)
+						break;
+					}
+				}
+				ctx.stroke()
+				t += 1;
+			}, 1)
+		}
+
+		function f(pos) {
+			a = pos[0]
+			b = pos[1]
+			t = pos[2]
+
+			da = b
+			db = (1 - a * a - b * b) * b - a + (t / 1000 - .5);
+			return [da, db]
+		}
+
+
+		const count = 20
+		const scaleF = 1600 * 2
+		const scaledF = 0.01
+
+		// drawFunction(f, scaleF, scaledF, count)
+		ctx.strokeStyle = '#FF0000'
+		drawDot([0.0001, 0.000001], f, count, scaleF, 0.7)
+	</script>
+</body>
+
+</html>

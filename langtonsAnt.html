@@ -1,0 +1,46 @@
+<html>
+
+<head>
+    <title>
+        Langton's Ant
+    </title>
+</head>
+
+<body>
+    <canvas id="canvasTag"></canvas>
+    <script>
+        const cnv = canvasTag
+        const ctx = cnv.getContext("2d")
+
+        function getMap(rule) {
+            return {
+                rule: rule,
+                map: {},
+                currentPosition: [0, 0],
+                getColor: (x, y) => {
+                    if (!this.map[y]) this.map[y] == {}
+                    if (!this.map[y][x]) this.map[y][x] == 0
+                    return this.map[y][x]
+                },
+                setColor: (x, y, c) => {
+                    if (!this.map[y]) this.map[y] = {}
+                    this.map[y][x] = c
+                },
+                step: () => {
+                    var currentColor = this.map[this.currentPosition[0]][this.currentPosition[1]]
+                    var nextDir = this.rule[currentColor]
+
+                    currentColor += 1;
+                    if (currentColor == this.rule.length) currentColor == 0
+                    var nextColor = this.rule[currentColor]
+                    setColor(this.currentPosition[0], this.currentPosition[1], nextColor)
+
+                    this.currentPosition[0] += nextDir[0]
+                    this.currentPosition[1] += nextDir[1]
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

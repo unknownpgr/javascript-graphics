@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Rain Drop</title>
+	<link rel="stylesheet" href="./fullCanvas.css">
+</head>
+
+<body>
+	<canvas id="canvas" onclick="onClick(event)"></canvas>
+	<div id="logDiv"></div>
+	<script>
+		var cnv = canvas
+		var ctx = cnv.getContext("2d")
+		var body = document.getElementsByTagName('body')[0]
+		var width = body.clientWidth
+		var height = body.clientHeight
+		cnv.width = width
+		cnv.height = height
+
+		var circleList = []
+
+		function onClick(event) {
+			circleList.push({
+				r: 0,
+				x: event.clientX,
+				y: event.clientY
+			})
+		}
+
+		// Random drop
+		setInterval(() => {
+			if (Math.random() < 0.25) return // probability = 0.25
+
+			var x = Math.random() * width
+			var y = Math.random() * height
+
+			circleList.push({
+				r: 0,
+				x: x,
+				y: y
+			})
+		}, 1000);
+
+		//Draw drop
+		setInterval(() => {
+			ctx.clearRect(0, 0, cnv.width, cnv.height)
+			var deleteList = []
+			circleList.forEach(circle => {
+				if (circle.r > 1000) deleteList.push(circle)
+				circle.r++
+				ctx.strokeStyle = 'rgba(20,20,40,' + Math.min(40 / circle.r, 1) + ')'
+				ctx.beginPath()
+				ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2)
+				ctx.stroke()
+			})
+			deleteList.forEach(circle => {
+				circleList.splice(circleList.indexOf(circle), 1)
+			})
+		}, 10);
+	</script>
+</body>
+
+</html>

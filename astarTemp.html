@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Page Title</title>
+</head>
+
+<body>
+	<div id="logDiv">LogDiv</div>
+	<script>
+		const log = log => logDiv.innerText = log
+
+		// g : estimation function that returns distance between given two nodes
+		// h : heuristic function that assumes distance between given two nodes
+		// hash : hash function for identify different node
+		function astarMap(g, h, hash) {
+
+			//Check if node is property-assignable
+			function nodeTest(node) {
+				node.testValue = 'testValue'
+				return node.testValue == 'testValue'
+			}
+
+			this.nodes = []
+			this.addNode = node => {
+				if (nodeTest(node)) this.nodes.push(node)
+				else throw new Error('Primitive type cannot be a node.')
+			}
+
+			this.findPath = (start, end) => {
+				var nodes = this.nodes.map(node => node.hash = this.hash(node))
+				var openSet = [start]
+				var closedSet = []
+
+				function argMin(x, func) {
+					var minData = undefined
+					var minValue = Infinity
+
+					x.foreach(d => {
+						if (minValue != (Math.min(minValue, func(x)))) minData = x
+					})
+
+					return minData
+				}
+
+				function getAround(current) {
+					nodes.filter(node => {
+						return
+					})
+				}
+				// 위키백과의 스텝을 요약하자.
+				// 1. Open Set에 있는 노드들 중, 가장 f가 작은 노드를 찾는다.
+				// 2. 현재 노드가 Goal일 경우 알고리즘 종료.
+				// 3. 현재 노드를 Open Set에서 제거하고 Closed Set에 넣는다.
+				// 4. Open Set 안에 있는 주위 노드들을 탐색한다.
+				//  4-1. 만약 주위 노드가 OpenSet에 있지 않다면 OpenSet에 넣는다.
+				//  4-2. Parent와 g,h,f를 계산한다.
+				//  4-3. 만약 주위 노드의 기존 f보다 현재 노드에서의 f값이 더 작다면 업데이트한다.
+
+				// 앗앗...여기서 실수한 걸 발견했다.
+				// 예컨대 큐브처럼 처음에 모든 State를 발견할 수 없는 경우가 있다. 길찾기만 생각해선 안 된다.
+
+				// 이 스텝을 효율적으로 개선해보자.
+				// 1. 현재 노드는 주어진다.
+				// 2. 현재 노드의 f값을 무한대로 설정한다.
+				// 3. 현재 노드 주위를 탐색한다.
+				//  3-1. 위의 과정과 같이 Parent와 g,h,f를 업데이트한다.
+				//  3-2. 그 중 가장 f가 작은 노드를 다음 번 현재 노드로 설정한다.
+
+				while (true) {
+					current.closed = true
+
+				}
+			}
+		}
+	</script>
+</body>
+
+</html>
